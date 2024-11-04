@@ -1,34 +1,23 @@
-FROM nvidia/cuda:11.8.0-devel-ubuntu20.04
 
-ENV TERM xterm-256color
+set -e
+DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$DIR"
+echo ">> DIR: ${DIR}"
 
-ENV WORKDIR=/opt/app
-WORKDIR $WORKDIR
+DOCKERFILE=$DIR/Dockerfile
+MODEL=${MODEL:-musicfm}
+APPNAME=reco/model/$MODEL
+APPTAG=${APPTAG:-latest}
 
-ENV TZ=Asia/Seoul
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+IMGNAME="$APPNAME:$APPTAG"
 
-RUN apt update && \
-    apt install -y git net-tools jq vim wget htop ffmpeg python3 pip
+echo "--- Docker build arguments ---"
+echo "    DOCKERFILE: $DOCKERFILE"
+echo "    IMGNAME: $IMGNAME"
+echo "------------------------------"
 
-RUN echo "alias ls='ls --color=auto'" >> ~/.bashrc && \
-    echo "export PS1='\[\e[31;1m\][\w]: \[\e[0m\]'" >> ~/.bashrc
-
-COPY requirements.txt $WORKDIR/
-RUN python3 -m pip install --upgrade pip && \
-    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 && \
-    pip3 install -r $WORKDIR/requirements.txt
-
-# accelerate config
-COPY accelerate_*.yaml $WORKDIR/
-
-COPY src $WORKDIR/src
-COPY res $WORKDIR/res
-
-
-COPY _entrypoint.sh $WORKDIR/
-
-ENTRYPOINT ["./_entrypoint.sh"]
-
-CMD ["bash"]
-
+docker build \
+    --tag "${IMGNAME}" \
+    -f "$DOCKERFILE" \
+    --force-rm \
+    "$DIR"
