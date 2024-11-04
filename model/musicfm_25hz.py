@@ -19,9 +19,9 @@ import torch
 from torch import nn
 from einops import rearrange
 
-from musicfm.modules.random_quantizer import RandomProjectionQuantizer
-from musicfm.modules.features import MelSTFT
-from musicfm.modules.conv import Conv2dSubsampling
+from modules.random_quantizer import RandomProjectionQuantizer
+from modules.features import MelSTFT
+from modules.conv import Conv2dSubsampling
 
 
 class MusicFM25Hz(nn.Module):
