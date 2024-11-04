@@ -15,6 +15,7 @@
 
 import json
 import random
+
 import torch
 from torch import nn
 from einops import rearrange
@@ -23,6 +24,11 @@ from modules.random_quantizer import RandomProjectionQuantizer
 from modules.features import MelSTFT
 from modules.conv import Conv2dSubsampling
 
+from transformers.utils import logging
+
+# 설정 추가
+logging.set_verbosity(logging.INFO) 
+logger = logging.get_logger(__name__)
 
 class MusicFM25Hz(nn.Module):
     """
@@ -48,10 +54,10 @@ class MusicFM25Hz(nn.Module):
         mask_hop=0.4,
         mask_prob=0.6,
         is_flash=False,
-        stat_path="./data/fma_stats.json",
-        model_path="./data/pretrained_fma.pt",
+        stat_path="./res/msd_stats.json",
+        model_path="./res/pretrained_msd.pt",
     ):
-        super(MusicFM25Hz, self).__init__()
+        super().__init__()
 
         # global variables
         self.hop_length = hop_length
@@ -98,12 +104,15 @@ class MusicFM25Hz(nn.Module):
                 Wav2Vec2ConformerEncoder,
                 Wav2Vec2ConformerConfig,
             )
+            
         config = Wav2Vec2ConformerConfig.from_pretrained(
             "facebook/wav2vec2-conformer-rope-large-960h-ft"
         )
         config.num_hidden_layers = encoder_depth
         config.hidden_size = encoder_dim
 
+        logger.info(config)
+        
         self.conformer = Wav2Vec2ConformerEncoder(config)
 
         # projection

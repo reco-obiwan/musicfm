@@ -48,7 +48,7 @@ from transformers.models.wav2vec2_conformer.configuration_wav2vec2_conformer imp
     Wav2Vec2ConformerConfig,
 )
 
-
+logging.set_verbosity(logging.INFO) 
 logger = logging.get_logger(__name__)
 
 

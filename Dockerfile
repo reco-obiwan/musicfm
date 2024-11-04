@@ -19,8 +19,8 @@ RUN echo "alias ls='ls --color=auto'" >> ~/.bashrc && \
 COPY requirements.txt $WORKDIR/
 RUN python3 -m pip install --upgrade pip && pip3 install -r $WORKDIR/requirements.txt
 
-#COPY res $WORKDIR/res
-#COPY src $WORKDIR/src
+COPY res $WORKDIR/res
+COPY src $WORKDIR/src
 
 
 ENTRYPOINT []
