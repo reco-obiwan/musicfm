@@ -1,3 +1,4 @@
+deepspeed
 transformers
 torch
 torchaudio
