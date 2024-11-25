@@ -16,14 +16,10 @@
 import json
 import random
 
-
 import torch
 from torch import nn
 import torchaudio
 from einops import rearrange
-
-from random_quantizer import RandomProjectionQuantizer
-from features import MelSTFT
 
 from transformers.models.wav2vec2_conformer.modeling_wav2vec2_conformer import (
     Wav2Vec2ConformerEncoder,
