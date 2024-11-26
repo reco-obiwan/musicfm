@@ -46,10 +46,9 @@ if [[ "$1" = "download" ]]; then
 else
     docker run -it --rm --ipc=host \
         -p $PORT:8001 \
-        -v /data01:$WORKDIDR/data01 \
         -v /data01/aac_music:$WORKDIDR/music \
-        -v /data01/musiccap:$WORKDIDR/musiccap \
-        -v /home/jupyterlab/work/tensorboard_log:$WORKDIDR/tensorboard_log \
+        -v /data01/musicfm:$WORKDIDR/musicfm \
+        -v /home/jupyterlab/work/tensorboard_Tlog:$WORKDIDR/tensorboard_log \
         -v $DIR/src:$WORKDIDR/src \
         -v $DIR/res:$WORKDIDR/res \
         --name $CONTAINER_NAME $IMGNAME

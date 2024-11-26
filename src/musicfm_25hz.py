@@ -29,8 +29,8 @@ from transformers.models.wav2vec2_conformer.modeling_wav2vec2_conformer import (
 from transformers.utils import logging
 
 # 설정 추가
-logging.set_verbosity(logging.INFO)
-logger = logging.get_logger(__name__)
+logging.set_verbosity_info()
+logger = logging.get_logger("transformers")
 
 
 class RandomProjectionQuantizer(nn.Module):
