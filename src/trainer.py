@@ -1,4 +1,6 @@
 from torch import nn, einsum
+from torch.optim import AdamW, lr_scheduler
+
 from accelerate import Accelerator
 
 
@@ -49,10 +51,10 @@ class MusicFMTrainer(nn.Module):
             self.valid_loader,
         )
 
-    def train_step(self):
+    def step(self):
         self.optimizer.zero_grad()
 
-    def train(self):
+    def start(self):
         # 모델을 훈련 모드로 설정합니다
         self.model.train()
 
@@ -66,7 +68,7 @@ class MusicFMTrainer(nn.Module):
                     f"musicfm-v01-{self.epoch}"
                 )  # initiate위한 코드
 
-            self.train_step()
+            self.step()
             self.steps += 1
 
             if (self.steps % self.epoch_every_steps) == (self.epoch_every_steps - 1):
@@ -77,3 +79,6 @@ class MusicFMTrainer(nn.Module):
         self.print("training complete")
 
         return self
+
+    def forward(self, x):
+        raise Exception("Should not be called”")

@@ -1,3 +1,4 @@
+# pylint: disable=too-many-locals, too-many-arguments
 import json
 import random
 
@@ -98,9 +99,8 @@ class MelSTFT(nn.Module):
         n_fft=2048,
         hop_length=240,
         n_mels=128,
-        is_db=True,
     ):
-        super(MelSTFT, self).__init__()
+        super().__init__()
 
         # spectrogram
         self.mel_stft = torchaudio.transforms.MelSpectrogram(
@@ -108,20 +108,16 @@ class MelSTFT(nn.Module):
         )
 
         # amplitude to decibel
-        self.is_db = is_db
-        if is_db:
-            self.amplitude_to_db = torchaudio.transforms.AmplitudeToDB()
+        self.amplitude_to_db = torchaudio.transforms.AmplitudeToDB()
 
     def forward(self, waveform):
-        if self.is_db:
-            return self.amplitude_to_db(self.mel_stft(waveform))
-        else:
-            return self.mel_stft(waveform)
+        return self.amplitude_to_db(self.mel_stft(waveform))
+        
 
 
 class Res2dModule(nn.Module):
     def __init__(self, idim, odim, stride=(2, 2)):
-        super(Res2dModule, self).__init__()
+        super().__init__()
         self.conv1 = nn.Conv2d(idim, odim, 3, padding=1, stride=stride)
         self.bn1 = nn.BatchNorm2d(odim)
         self.conv2 = nn.Conv2d(odim, odim, 3, padding=1)

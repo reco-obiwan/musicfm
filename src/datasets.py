@@ -1,9 +1,10 @@
 import os
-import requests
+import random
+
 import shutil
+import requests
 import torch
 import torchaudio
-
 from torch.utils.data import Dataset
 from transformers.utils import logging
 
@@ -21,9 +22,9 @@ class DatasetBase(Dataset):
 
         self.config = config
         self.track_download_url = self.config["datasets"]["track_download_url"]
-        track_list_path = self.config["datasets"]["track_list"]
+        self.track_list_path = self.config["datasets"]["track_list"]
 
-        with open(file_list_path, "r") as f:
+        with open(self.track_list_path, "r") as f:
             self.track_list = [line.strip() for line in f]
 
         self.session = requests.Session()
@@ -35,9 +36,9 @@ class DatasetBase(Dataset):
         if idx >= len(self.track_list):
             raise IndexError("Index out of range")
 
-        return get_wav(self.track_list[idx])
+        return self._get_wav(self.track_list[idx])
 
-    def get_wav(self, track_id, freq=16000, seconds=30):
+    def _get_wav(self, track_id, freq=16000, seconds=30):
         path = self._get_music_path(track_id)
         waveform, orig_freq = torchaudio.load(path)
 
@@ -103,21 +104,21 @@ class DatasetBase(Dataset):
 class TrainDataset(DatasetBase):
     def __init__(self, config):
         super().__init__(config=config)
-        with open(file_list_path, "r") as f:
+        with open(self.track_list_path, "r") as f:
             self.track_list = [line.strip() for line in f]
 
 
 class ValidationDataset(DatasetBase):
     def __init__(self, config, num_samples):
         super().__init__(config=config)
-        with open(file_list_path, "r") as f:
+        with open(self.track_list_path, "r") as f:
             c = [line.strip() for line in f]
 
         self.track_list = random.sample(self.track_list, num_samples)
 
 
-if __name__ == "__main__":
-    db = DatasetBase()
-    track_id = "520736792"
-    logger.info(f"Track {track_id} already exists")
-    db.get_wav(track_id)
+# if __name__ == "__main__":
+#     db = DatasetBase()
+#     track_id = "520736792"
+#     logger.info(f"Track {track_id} already exists")
+#     db.get_wav(track_id)

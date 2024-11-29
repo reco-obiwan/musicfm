@@ -3,11 +3,13 @@ import sys
 import argparse
 
 import torch
+from torch.utils.data import DataLoader
+
 from transformers.utils import logging
 
 from config import Config
 from trainer import MusicFMTrainer
-from datasets import TrainDataset
+from datasets import TrainDataset, ValidationDataset
 from musicfm import MusicFM25Hz
 
 logging.set_verbosity_info()
@@ -57,7 +59,7 @@ def train(config):
             "log_with": ["tensorboard"],
             "project_dir": "tensorboard_log",
         },
-    ).train()
+    ).start()
 
 
 def main():
