@@ -13,7 +13,8 @@ from musicfm import MusicFM25Hz
 logging.set_verbosity_info()
 logger = logging.get_logger("transformers")
 
-workdir = os.environ['WORKDIR']
+workdir = os.environ["WORKDIR"]
+
 
 def get_arguments():
     parser = argparse.ArgumentParser(description="Train Mulan")
@@ -23,39 +24,54 @@ def get_arguments():
 
 
 def train(config):
-    
+    batch_size = config["params"]["batch_size"]
+
     # load MusicFM
     musicfm = MusicFM25Hz(
         stat_path=os.path.join(workdir, "res", "msd_stats.json"),
         model_path=os.path.join(workdir, "res", "pretrained_msd.pt"),
     )
 
-    MusicFMTrainer(model=musicfm).train()
-
-    train_dataset = TrainDataset(config=config)
-    
     train_loader = DataLoader(
-        dataset=train_dataset,
+        dataset=TrainDataset(config=config),
         batch_size=batch_size,
         shuffle=False,
         num_workers=10,
         prefetch_factor=4,
     )
-    
+
+    valid_loader = DataLoader(
+        dataset=ValidationDataset(config=config),
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=10,
+        prefetch_factor=4,
+    )
+
+    MusicFMTrainer(
+        model=musicfm,
+        train_loader=train_loader,
+        valid_loader=valid_loader,
+        accelerate_kwargs={
+            "cpu": False,
+            "log_with": ["tensorboard"],
+            "project_dir": "tensorboard_log",
+        },
+    ).train()
+
+
 def main():
     args = get_arguments()
     logger.info("args: %s", args)
-    
-    config = Config(config_path=args.config)    
+
+    config = Config(config_path=args.config)
     logger.info("config: %s ", config)
-    
+
     if args.task == "train":
         train(config)
     else:
         raise ValueError()
-    
 
 
 if __name__ == "__main__":
     main()
-    

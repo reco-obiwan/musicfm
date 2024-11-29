@@ -1,4 +1,5 @@
 """yaml config to dict"""
+
 import yaml
 
 
@@ -24,5 +25,3 @@ class Config:
 
     def __str__(self):
         return str(self.config)
-
-

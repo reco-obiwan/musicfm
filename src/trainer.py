@@ -55,7 +55,7 @@ class MusicFMTrainer(nn.Module):
     def train(self):
         # 모델을 훈련 모드로 설정합니다
         self.model.train()
-        
+
         self.steps = 0
         while self.steps < self.num_train_steps:
             if self.steps % self.epoch_every_steps == 0:
@@ -75,5 +75,5 @@ class MusicFMTrainer(nn.Module):
                 self.accelerator.end_training()
         # steps는 현재 돌아가는 step, num_train_steps는 이때까지 돌아야한다는 것
         self.print("training complete")
-        
+
         return self

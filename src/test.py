@@ -32,6 +32,3 @@ print(f"emb: {emb.shape}")
 # print(f"logits: {logits['melspec_2048'].shape}")
 # print(f"hidden_states: {hidden_emb[0].shape}")
 # print(f"hidden_states: {hidden_emb[1].shape}")
-
-
-def main

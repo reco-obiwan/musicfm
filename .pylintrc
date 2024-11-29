@@ -185,7 +185,7 @@ function-naming-style=snake_case
 #function-rgx=
 
 # Good variable names which should always be accepted, separated by a comma.
-good-names=i,
+good-names=i, x, b, xq, f, S, SS, t, mx,
            j,
            k,
            ex,
@@ -421,7 +421,7 @@ confidence=HIGH,
 # --enable=similarities". If you want to run only the classes checker, but have
 # no Warning level messages displayed, use "--disable=all --enable=classes
 # --disable=W".
-disable=raw-checker-failed,
+disable=raw-checker-failed, import-error, missing-function-docstring, 
         bad-inline-option,
         locally-disabled,
         file-ignored,
