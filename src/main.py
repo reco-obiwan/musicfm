@@ -1,8 +1,6 @@
 import os
-import sys
 import argparse
 
-import torch
 from torch.utils.data import DataLoader
 
 from transformers.utils import logging

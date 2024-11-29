@@ -112,7 +112,6 @@ class MelSTFT(nn.Module):
 
     def forward(self, waveform):
         return self.amplitude_to_db(self.mel_stft(waveform))
-        
 
 
 class Res2dModule(nn.Module):
@@ -222,9 +221,7 @@ class MusicFM25Hz(nn.Module):
             self.stat = json.load(f)
 
         # feature extractor
-        self.preprocessor_melspec_2048 = MelSTFT(
-            n_fft=2048, hop_length=hop_length, is_db=True
-        )
+        self.preprocessor_melspec_2048 = MelSTFT(n_fft=2048, hop_length=hop_length)
 
         # random quantizer
         seed = 142
@@ -272,7 +269,7 @@ class MusicFM25Hz(nn.Module):
 
     def masking(self, x):
         """random masking of 400ms with given probability"""
-        logger.info(f"x: {x.shape}")
+        # logger.info(f"x: {x.shape}")
         mx = x.clone()
         b, t = mx.shape
         len_masking_raw = int(24000 * self.mask_hop)  # 토큰 길이 400ms
@@ -286,12 +283,12 @@ class MusicFM25Hz(nn.Module):
         # [4, 75]
 
         a = start_indices.repeat_interleave(len_masking_raw, dim=1)
-        logger.info(f"a: {a.shape}")
+        # logger.info(f"a: {a.shape}")
 
         time_domain_masked_indices = torch.nonzero(
             start_indices.repeat_interleave(len_masking_raw, dim=1)
         )
-        logger.info(f"time_domain_masked_indices: {time_domain_masked_indices.shape}")
+        # logger.info(f"time_domain_masked_indices: {time_domain_masked_indices.shape}")
 
         token_domain_masked_indices = torch.nonzero(
             start_indices.repeat_interleave(len_masking_token, dim=1)
