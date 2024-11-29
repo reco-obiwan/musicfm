@@ -16,8 +16,11 @@ class MusicFMTrainer(nn.Module):
         validation_check_every=10000,
         save_model_every=10000,
         save_logs_every=10000,
+        num_train_steps=500000,
     ):
         super().__init__()
+
+        self.num_train_steps = num_train_steps
 
         self.steps = 0
         self.model = model
@@ -32,7 +35,7 @@ class MusicFMTrainer(nn.Module):
 
         # optimizers
         self.optimizer = AdamW(
-            self.mulan.parameters(),
+            self.model.parameters(),
             lr=2e-5,
             betas=(0.9, 0.99),
             eps=1e-6,

@@ -109,7 +109,7 @@ class TrainDataset(DatasetBase):
 
 
 class ValidationDataset(DatasetBase):
-    def __init__(self, config, num_samples):
+    def __init__(self, config, num_samples=10000):
         super().__init__(config=config)
         with open(self.track_list_path, "r") as f:
             c = [line.strip() for line in f]

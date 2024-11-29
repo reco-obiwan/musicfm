@@ -9,3 +9,4 @@ params:
 datasets:
   track_list: res/musicfm.csv
   track_download_url: https://pri-alice.qa01.music-flo.com/reco/tracks
+  num_train_steps: 500000
