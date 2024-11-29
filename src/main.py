@@ -1,16 +1,19 @@
 import os
 import sys
-import torch
+import argparse
 
-from musicfm import MusicFM25Hz
+import torch
 from transformers.utils import logging
 
+from config import Config
 from trainer import MusicFMTrainer
 from datasets import TrainDataset
+from musicfm import MusicFM25Hz
 
 logging.set_verbosity_info()
 logger = logging.get_logger("transformers")
 
+workdir = os.environ['WORKDIR']
 
 def get_arguments():
     parser = argparse.ArgumentParser(description="Train Mulan")
