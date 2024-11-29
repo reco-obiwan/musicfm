@@ -7,4 +7,5 @@
 # data
 *.json
 *.pt
+*.csv
 

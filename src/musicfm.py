@@ -28,7 +28,6 @@ from transformers.models.wav2vec2_conformer.modeling_wav2vec2_conformer import (
 
 from transformers.utils import logging
 
-# 설정 추가
 logging.set_verbosity_info()
 logger = logging.get_logger("transformers")
 
@@ -203,7 +202,7 @@ class Conv2dSubsampling(nn.Module):
 
 class MusicFM25Hz(nn.Module):
     """
-    MusicFM
+    MusicFM (Music Foundation Model)
 
     Input: 128-band mel spectrogram
     Frontend: 2-layer Residual convolution

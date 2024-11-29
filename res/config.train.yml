@@ -1,0 +1,9 @@
+params:
+  batch_size: 4
+  num_train_steps: 500000
+  epoch_every_steps: 50000
+  freq: 1
+datasets:
+  track_list: res/musicfm.csv
+  train: bastcg
+  validation:

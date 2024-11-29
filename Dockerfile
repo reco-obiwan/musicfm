@@ -19,10 +19,13 @@ RUN echo "alias ls='ls --color=auto'" >> ~/.bashrc && \
 COPY requirements.txt $WORKDIR/
 RUN python3 -m pip install --upgrade pip && pip3 install -r $WORKDIR/requirements.txt
 
+# accelerate config
+COPY accelerate_*.yaml $WORKDIR/
+COPY _entrypoint.sh $WORKDIR/
+
 COPY res $WORKDIR/res
 COPY src $WORKDIR/src
 
-
-ENTRYPOINT []
+ENTRYPOINT ["./_entrypoint.sh"]
 
 CMD ["bash"]

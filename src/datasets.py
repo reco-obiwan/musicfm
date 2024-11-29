@@ -12,32 +12,44 @@ logging.set_verbosity_info()
 logger = logging.get_logger("transformers")
 
 class DatasetBase(Dataset):
-    def __init__(self, config=None, batch_size=None):
+    def __init__(self, config):
         super().__init__()
         self.source_url = "https://pri-alice.qa01.music-flo.com/reco/tracks"
         self.local_music_path = "/opt/app/music"
         self.session = requests.Session()
+        
+        self.config = config
+        track_list_path = self.config["datasets"]["track_list"]
+        
+        with open(file_list_path, 'r') as f:
+            self.track_list = [line.strip() for line in f]
+
     
     def __len__(self):
-        raise RuntimeError("abstract function")
+        return len(self.track_list)
     
     def __getitem__(self, idx):
-        raise RuntimeError("abstract function")
+        if idx >= len(self.track_list):
+            raise IndexError("Index out of range")
+        
+        return get_wav(self.track_list[idx])
     
-    def get_wav(self, music_id):
-        path = self._get_music_path(music_id)
+    def get_wav(self, track_id, 아직도 근태 문제와 재택 시 연락이 잘 안된다는 의견이 구성원들로부터 나오고 있습니다. 특별한 이슈가 없다면 사무실 근무와 재택 근무 시간의 비율을 비슷하게 맞춰 주시면 좋을 것 같습니다. 코어 근무시간 잘 지켜줬으면 좋겠다.=16000, seconds=30):
+        path = self._get_music_path(track_id)
         waveform, orig_freq = torchaudio.load(path)
         
         print(waveform.shape)
         
-        # 스테레오를 모노로 변환 (필요한 경우)
+        # 스테레오를 모노로 변환
         if waveform.shape[0] > 1:
             waveform = torch.mean(waveform, dim=0, keepdim=True)
 
-        resampler = torchaudio.transforms.Resample(orig_freq=orig_freq, new_freq=16000)
+        resampler = torchaudio.transforms.Resample(orig_freq=orig_freq, new_freq=freq)
         resampled_waveform = resampler(waveform)
                                     
-        print(resampled_waveform.shape)            
+        print(resampled_waveform.shape)   
+        
+        length = seconds * freq         
         
     
     def _get_music_path(self, track_id):
@@ -84,9 +96,21 @@ class DatasetBase(Dataset):
 
 
 class TrainDataset(DatasetBase):
-    def __init__(self, config, batch_size):
-        super().__init__(config=config, batch_size=batch_size)
-        pass
+    def __init__(self, config):
+        super().__init__(config=config)
+        with open(file_list_path, 'r') as f:
+            self.track_list = [line.strip() for line in f]
+
+
+class ValidationDataset(DatasetBase):
+    def __init__(self, config, num_samples):
+        super().__init__(config=config)
+        with open(file_list_path, 'r') as f:
+            c = [line.strip() for line in f]            
+            
+        self.track_list = random.sample(self.track_list, num_samples)
+            
+        
     
     
 if __name__ == "__main__":
