@@ -2,7 +2,7 @@ import os
 import sys
 import torch
 
-from model.musicfm_25hz import MusicFM25Hz
+from musicfm import MusicFM25Hz
 from transformers.utils import logging
 
 from trainer import MusicFMTrainer

@@ -28,4 +28,4 @@ COPY src $WORKDIR/src
 
 ENTRYPOINT ["./_entrypoint.sh"]
 
-CMD ["bash"]
+CMD ["train"]

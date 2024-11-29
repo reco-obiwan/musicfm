@@ -17,7 +17,7 @@ import json
 import random
 
 import torch
-from torch import nn
+from torch import nn, einsum
 import torchaudio
 from einops import rearrange
 

@@ -34,7 +34,7 @@ class DatasetBase(Dataset):
         
         return get_wav(self.track_list[idx])
     
-    def get_wav(self, track_id, 아직도 근태 문제와 재택 시 연락이 잘 안된다는 의견이 구성원들로부터 나오고 있습니다. 특별한 이슈가 없다면 사무실 근무와 재택 근무 시간의 비율을 비슷하게 맞춰 주시면 좋을 것 같습니다. 코어 근무시간 잘 지켜줬으면 좋겠다.=16000, seconds=30):
+    def get_wav(self, track_id, freq=16000, seconds=30):
         path = self._get_music_path(track_id)
         waveform, orig_freq = torchaudio.load(path)
         

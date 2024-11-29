@@ -12,7 +12,6 @@ function train_prod () {
 
 if [[ "$1" = "train" ]]; then
     shift 1
-    # train_dev
     train_prod
 else
     eval "$@"
