@@ -27,22 +27,35 @@ class DatasetBase(Dataset):
         with open(self.track_list_path, "r") as f:
             self.track_list = [line.strip() for line in f]
 
+        self.total_track_cnt = len(self.track_list)
+            
         self.session = requests.Session()
+        
 
     def __len__(self):
         return len(self.track_list)
 
-    def __getitem__(self, idx):
-        if idx >= len(self.track_list):
-            raise IndexError("Index out of range")
+    def __getitem__(self, _):
+        tracks = list(range(self.total_track_cnt))
+        
+        for _ in range(20):  # Limit attempts to 10
+            idx = random.choice(tracks)
+            wav = self._get_wav(self.track_list[idx])
+            if wav is not None:
+                return wav
 
-        return self._get_wav(self.track_list[idx])
+        raise RuntimeError("Unable to retrieve a valid waveform from the dataset after 10 attempts")
+    
 
     def _get_wav(self, track_id, freq=16000, seconds=30):
         path = self._get_music_path(track_id)
+        
+        if path is None:
+            return None
+        
         waveform, orig_freq = torchaudio.load(path)
 
-        print(waveform.shape)
+        logger.info(waveform.shape)
 
         # 스테레오를 모노로 변환
         if waveform.shape[0] > 1:
@@ -51,7 +64,7 @@ class DatasetBase(Dataset):
         resampler = torchaudio.transforms.Resample(orig_freq=orig_freq, new_freq=freq)
         resampled_waveform = resampler(waveform)
 
-        print(resampled_waveform.shape)
+        logger.info(resampled_waveform.shape)
 
         length = seconds * freq
 
@@ -91,14 +104,14 @@ class DatasetBase(Dataset):
             return track_download_name
         except requests.RequestException as req_err:
             error_message = f"HTTP request error for track {track_id}: {req_err}"
-            logger.error(error_message)
-            raise
+            logger.warning(error_message)
         except Exception as exc:
             error_message = (
                 f"Failed to download {track_id} from {track_download_url}: {exc}"
             )
-            logger.error(error_message)
-            return None
+            logger.warning(error_message)
+        
+        return None
 
 
 class TrainDataset(DatasetBase):

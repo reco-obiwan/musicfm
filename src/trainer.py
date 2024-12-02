@@ -1,7 +1,14 @@
+from itertools import cycle
+
 from torch import nn, einsum
 from torch.optim import AdamW, lr_scheduler
 
 from accelerate import Accelerator
+
+from transformers.utils import logging
+
+logging.set_verbosity_info()
+logger = logging.get_logger("transformers")
 
 
 class MusicFMTrainer(nn.Module):
@@ -12,19 +19,14 @@ class MusicFMTrainer(nn.Module):
         valid_loader,
         accelerate_kwargs,
         *,
-        epoch_every_steps=10000,
-        validation_check_every=10000,
-        save_model_every=10000,
-        save_logs_every=10000,
-        num_train_steps=500000,
+        epoches=100,
+        save_model_every=1,
+        save_logs_every=1,
     ):
         super().__init__()
 
-        self.num_train_steps = num_train_steps
-
-        self.steps = 0
+        self.epochs = epoches
         self.model = model
-        self.epoch_every_steps = epoch_every_steps
 
         self.accelerator = Accelerator(**accelerate_kwargs)
         self.device = self.accelerator.device
@@ -54,32 +56,41 @@ class MusicFMTrainer(nn.Module):
             self.valid_loader,
         )
 
-    def step(self):
-        self.optimizer.zero_grad()
+    def train_epoch(self):
+        self.model.train()
+        total_loss = 0
+        for batch_idx, wav in enumerate(self.train_loader):
+            self.optimizer.zero_grad()
+            logits, _, losses, accuracies = self.model(wav)
 
-    def start(self):
+            logger.info(f"logits: {logits}")
+            logger.info(f"losses: {losses}")
+            logger.info(f"accuracies: {accuracies}")
+
+            # losses[""]
+            # self.accelerator.backward(loss / self.grad_accum_every)
+            # self.optimizer.step()
+            # total_loss += loss.item()
+        return total_loss / len(self.train_loader)
+
+    def validate(self):
+        self.model.eval()
+
+    def start_train(self):
         # 모델을 훈련 모드로 설정합니다
         self.model.train()
 
         self.steps = 0
-        while self.steps < self.num_train_steps:
-            if self.steps % self.epoch_every_steps == 0:
-                # 만약 epoch_every_steps 이 10일 경우,
-                # steps 0(epoch:1) -> 1 -> 2 -> ... -> 10(epoch:2) -> ...
-                self.epoch = int(self.steps // self.epoch_every_steps) + 1
-                self.accelerator.init_trackers(
-                    f"musicfm-v01-{self.epoch}"
-                )  # initiate위한 코드
+        for epoch in range(self.epochs):
+            self.accelerator.init_trackers(f"musicfm-v01-{epoch}")
+            self.train_epoch()
 
-            self.step()
-            self.steps += 1
-
-            if (self.steps % self.epoch_every_steps) == (self.epoch_every_steps - 1):
-                # 만약 epoch_every_steps 이 10일 경우,
-                # steps 0 -> 1 -> 2 -> ... -> 9(logging_end)
-                self.accelerator.end_training()
-        # steps는 현재 돌아가는 step, num_train_steps는 이때까지 돌아야한다는 것
-        self.print("training complete")
+            self.accelerator.end_training()
+            val_loss, val_acc = self.validate()
+            logger.info(f"Epoch {epoch+1}/{self.epochs}:")
+            logger.info(
+                f"Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.4f}"
+            )
 
         return self
 

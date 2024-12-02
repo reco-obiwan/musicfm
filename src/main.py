@@ -25,7 +25,6 @@ def get_arguments():
 
 def train(config):
     batch_size = config["params"]["batch_size"]
-    num_train_steps = config["params"]["num_train_steps"]
 
     # load MusicFM
     musicfm = MusicFM25Hz(
@@ -53,13 +52,13 @@ def train(config):
         model=musicfm,
         train_loader=train_loader,
         valid_loader=valid_loader,
-        num_train_steps=num_train_steps,
+        epoches=config["params"]["epoches"],
         accelerate_kwargs={
             "cpu": False,
             "log_with": ["tensorboard"],
             "project_dir": "tensorboard_log",
         },
-    ).start()
+    ).start_train()
 
 
 def main():
