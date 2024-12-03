@@ -95,16 +95,16 @@ class RandomProjectionQuantizer(nn.Module):
 class MelSTFT(nn.Module):
     def __init__(
         self,
-        sample_rate=16000,
-        n_fft=800,
-        hop_length=200,
+        sample_rate=24000,
+        n_fft=2048,
+        hop_length=240,
         n_mels=128,
     ):
         super().__init__()
 
         # spectrogram
         self.mel_stft = torchaudio.transforms.MelSpectrogram(
-            sample_rate=sample_rate, n_fft=n_fft, hop_length=hop_length, n_mels=n_mels
+            sample_rate=24000, n_fft=n_fft, hop_length=hop_length, n_mels=n_mels
         )
 
         # amplitude to decibel
