@@ -3,7 +3,7 @@ from itertools import cycle
 from torch import nn, einsum
 from torch.optim import AdamW, lr_scheduler
 
-from accelerate import Accelerator
+from accelerate import Accelerator, DistributedDataParallelKwargs
 
 from transformers.utils import logging
 
@@ -28,7 +28,10 @@ class MusicFMTrainer(nn.Module):
         self.epochs = epoches
         self.model = model
 
-        self.accelerator = Accelerator(**accelerate_kwargs)
+        ddp_kwargs = DistributedDataParallelKwargs(find_unused_parameters=True)
+        self.accelerator = Accelerator(
+            **accelerate_kwargs, kwargs_handlers=[ddp_kwargs]
+        )
         self.device = self.accelerator.device
 
         # datasets
@@ -66,15 +69,26 @@ class MusicFMTrainer(nn.Module):
             logger.info("logits: %s", logits["melspec_2048"].shape)
             logger.info("losses: %s", losses)
             logger.info("accuracies: %s", accuracies)
+            loss = losses["melspec_2048"]
+            self.accelerator.backward(loss)
+            self.optimizer.step()
+            self.optimizer.zero_grad()
+            self.accelerator.wait_for_everyone()
 
-            # losses[""]
-            # self.accelerator.backward(loss / self.grad_accum_every)
-            # self.optimizer.step()
-            # total_loss += loss.item()
+            total_loss += loss.item()
         return total_loss / len(self.train_loader)
 
     def validate(self):
         self.model.eval()
+        total_loss = 0
+        correct = 0
+        with torch.no_grad():
+            for batch_idx, wav in enumerate(self.train_loader):
+                logits, _, losses, accuracies = self.model(wav)
+                loss = losses["melspec_2048"]
+                total_loss += loss.item()
+
+        return total_loss / len(self.valid_loader)
 
     def start_train(self):
         # 모델을 훈련 모드로 설정합니다
@@ -84,13 +98,11 @@ class MusicFMTrainer(nn.Module):
         for epoch in range(self.epochs):
             self.accelerator.init_trackers(f"musicfm-v01-{epoch}")
             self.train_epoch()
-
             self.accelerator.end_training()
-            val_loss, val_acc = self.validate()
+
+            val_loss = self.validate()
             logger.info(f"Epoch {epoch+1}/{self.epochs}:")
-            logger.info(
-                f"Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.4f}"
-            )
+            logger.info(f"Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}s")
 
         return self
 

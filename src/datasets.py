@@ -129,6 +129,11 @@ class ValidationDataset(DatasetBase):
 
         self.track_list = random.sample(self.track_list, num_samples)
 
+        self.num_samples = num_samples
+
+    def __len__(self):
+        return self.num_samples
+
 
 # if __name__ == "__main__":
 #     db = DatasetBase()
