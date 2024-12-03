@@ -28,35 +28,32 @@ class DatasetBase(Dataset):
             self.track_list = [line.strip() for line in f]
 
         self.total_track_cnt = len(self.track_list)
-            
+
         self.session = requests.Session()
-        
 
     def __len__(self):
         return len(self.track_list)
 
     def __getitem__(self, _):
         tracks = list(range(self.total_track_cnt))
-        
+
         for _ in range(20):  # Limit attempts to 10
             idx = random.choice(tracks)
             wav = self._get_wav(self.track_list[idx])
             if wav is not None:
                 return wav
 
-        raise RuntimeError("Unable to retrieve a valid waveform from the dataset after 10 attempts")
-    
+        raise RuntimeError(
+            "Unable to retrieve a valid waveform from the dataset after 10 attempts"
+        )
 
-    def _get_wav(self, track_id, freq=16000, seconds=30):
+    def _get_wav(self, track_id, freq=24000, seconds=30):
         path = self._get_music_path(track_id)
-        
+
         if path is None:
             return None
-        
+
         waveform, orig_freq = torchaudio.load(path)
-
-        logger.info(waveform.shape)
-
         # 스테레오를 모노로 변환
         if waveform.shape[0] > 1:
             waveform = torch.mean(waveform, dim=0, keepdim=True)
@@ -64,9 +61,14 @@ class DatasetBase(Dataset):
         resampler = torchaudio.transforms.Resample(orig_freq=orig_freq, new_freq=freq)
         resampled_waveform = resampler(waveform)
 
-        logger.info(resampled_waveform.shape)
-
         length = seconds * freq
+        start = random.randint(0, resampled_waveform.shape[1] - length)
+        end = start + length
+
+        output_waveform = resampled_waveform[:, start:end].squeeze(0)
+        logger.debug("track_id: %s, shape: %s", track_id, output_waveform.shape)
+
+        return output_waveform
 
     def _get_music_path(self, track_id):
         for ext in ["aac", "m4a"]:
@@ -98,8 +100,6 @@ class DatasetBase(Dataset):
                     with open(track_download_name, "wb") as file:
                         shutil.copyfileobj(download_response.raw, file)
                 logger.info(f"Downloaded track {track_id} successfully")
-            else:
-                logger.info(f"Track {track_id} already exists")
 
             return track_download_name
         except requests.RequestException as req_err:
@@ -110,7 +110,7 @@ class DatasetBase(Dataset):
                 f"Failed to download {track_id} from {track_download_url}: {exc}"
             )
             logger.warning(error_message)
-        
+
         return None
 
 

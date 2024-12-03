@@ -63,9 +63,9 @@ class MusicFMTrainer(nn.Module):
             self.optimizer.zero_grad()
             logits, _, losses, accuracies = self.model(wav)
 
-            logger.info(f"logits: {logits}")
-            logger.info(f"losses: {losses}")
-            logger.info(f"accuracies: {accuracies}")
+            logger.info("logits: %s", logits["melspec_2048"].shape)
+            logger.info("losses: %s", losses)
+            logger.info("accuracies: %s", accuracies)
 
             # losses[""]
             # self.accelerator.backward(loss / self.grad_accum_every)

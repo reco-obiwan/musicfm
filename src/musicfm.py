@@ -95,9 +95,9 @@ class RandomProjectionQuantizer(nn.Module):
 class MelSTFT(nn.Module):
     def __init__(
         self,
-        sample_rate=24000,
-        n_fft=2048,
-        hop_length=240,
+        sample_rate=16000,
+        n_fft=800,
+        hop_length=200,
         n_mels=128,
     ):
         super().__init__()
@@ -360,13 +360,13 @@ class MusicFM25Hz(nn.Module):
     def tokenize(self, x):
         out = {}
         for i, key in enumerate(x.keys()):
+            logger.info("tokenize: %s", x[key].shape)
             layer = getattr(self, f"quantizer_{key}_{i}")
             out[key] = layer(x[key])
         return out
 
     def get_targets(self, x):
         x = self.preprocessing(x, features=self.features)
-
         x = self.normalize(x)
         x = self.rearrange(x)
         # [4, 750, 512]
