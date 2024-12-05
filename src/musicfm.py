@@ -64,9 +64,9 @@ class RandomProjectionQuantizer(nn.Module):
         # compute distances
         logger.debug("codebook shape: %s", self.codebook.shape)
         logger.debug("normalized_x shape: %s", normalized_x.shape)
-        
+
         distances = torch.cdist(self.codebook, normalized_x)
-        
+
         logger.debug("distances shape: %s", distances.shape)
 
         # get nearest
@@ -204,7 +204,6 @@ class MusicFM25Hz(nn.Module):
         encoder_depth=12,
         mask_hop=0.4,
         mask_prob=0.6,
-        model_path="./res/pretrained_msd.pt",
     ):
         super().__init__()
 
@@ -215,7 +214,7 @@ class MusicFM25Hz(nn.Module):
         self.num_codebooks = num_codebooks
         self.codebook_size = codebook_size
         self.features = features
-        
+
         # feature extractor
         self.preprocessor_melspec_2048 = MelSTFT(n_fft=2048, hop_length=hop_length)
 
@@ -257,12 +256,6 @@ class MusicFM25Hz(nn.Module):
         random.seed(seed)
         self.cls_token = nn.Parameter(torch.randn(encoder_dim))
 
-        # load model
-        if model_path:
-            S = torch.load(model_path, weights_only=False)["state_dict"]
-            SS = {k[6:]: v for k, v in S.items()}
-            self.load_state_dict(SS, strict=True)
-
     def masking(self, x):
         """random masking of 400ms with given probability"""
         # logger.info(f"x: {x.shape}")
@@ -290,7 +283,9 @@ class MusicFM25Hz(nn.Module):
             start_indices.repeat_interleave(len_masking_token, dim=1)
         )
 
-        logger.debug(f"token_domain_masked_indices: {token_domain_masked_indices.shape}") # [890, 2]
+        logger.debug(
+            f"token_domain_masked_indices: {token_domain_masked_indices.shape}"
+        )  # [890, 2]
 
         # mask with random values
         masking_noise = (
@@ -319,11 +314,13 @@ class MusicFM25Hz(nn.Module):
 
     def encoder(self, x):
         """2-layer conv + w2v-conformer"""
-        logger.debug(f"conv_input: {x.shape}") # [2, 128, 3000]
+        logger.debug(f"conv_input: {x.shape}")  # [2, 128, 3000]
         x = self.conv(x)
-        logger.debug(f"conv_output: {x.shape}") # [2, 750, 1024]
+        logger.debug(f"conv_output: {x.shape}")  # [2, 750, 1024]
         out = self.conformer(x, output_hidden_states=True)
-        logger.debug(f"conformer_out: {out['last_hidden_state'].shape}") # [2, 750, 1024]
+        logger.debug(
+            f"conformer_out: {out['last_hidden_state'].shape}"
+        )  # [2, 750, 1024]
         hidden_emb = out["hidden_states"]
         last_emb = out["last_hidden_state"]
         logits = self.linear(last_emb)
@@ -339,7 +336,7 @@ class MusicFM25Hz(nn.Module):
         melspec_2048_mean = 6.768444971712967
         melspec_2048_std = 18.417922652295623
         x["melspec_2048"] = (x["melspec_2048"] - melspec_2048_mean) / melspec_2048_std
-        
+
         return x
 
     @torch.no_grad()

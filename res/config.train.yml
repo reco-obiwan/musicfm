@@ -1,3 +1,6 @@
+version: musicfm_v01
+wandb: true
+
 params:
   batch_size: 5
   epoches: 1000000

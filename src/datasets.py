@@ -85,7 +85,7 @@ class DatasetBase(Dataset):
 
             body = response.json()
             logger.debug("Track metadata retrieved successfully: %s", body)
-            
+
             track_download_url = body["data"]["url"].strip()
             track_extension = track_download_url.rsplit(".", maxsplit=1)[-1]
 
@@ -121,10 +121,9 @@ class TrainDataset(DatasetBase):
         with open(self.track_list_path, "r") as f:
             self.track_list = [line.strip() for line in f]
 
-        
 
 class ValidationDataset(DatasetBase):
-    def __init__(self, config, num_samples=10000):
+    def __init__(self, config, num_samples=200):
         super().__init__(config=config)
         with open(self.track_list_path, "r") as f:
             c = [line.strip() for line in f]

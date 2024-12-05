@@ -5,10 +5,9 @@ from torch.utils.data import DataLoader
 
 from transformers.utils import logging
 
-from config import Config
+from utilities import Config
 from trainer import MusicFMTrainer
 from datasets import TrainDataset, ValidationDataset
-from musicfm import MusicFM25Hz
 
 logging.set_verbosity_info()
 logger = logging.get_logger("transformers")
@@ -25,11 +24,6 @@ def get_arguments():
 
 def train(config):
     batch_size = config["params"]["batch_size"]
-
-    # load MusicFM
-    musicfm = MusicFM25Hz(
-        model_path=os.path.join(workdir, "res", "pretrained_msd.pt"),
-    )
 
     train_loader = DataLoader(
         dataset=TrainDataset(config=config),
@@ -48,13 +42,16 @@ def train(config):
     )
 
     MusicFMTrainer(
-        model=musicfm,
+        workdir=workdir,
         train_loader=train_loader,
         valid_loader=valid_loader,
+        version=config["version"],
         epoches=config["params"]["epoches"],
         save_interval=config["params"]["save_interval"],
         log_interval=config["params"]["log_interval"],
-        accelerate_kwargs={"cpu": False,},
+        accelerate_kwargs={
+            "cpu": False,
+        },
     ).start_train()
 
 
