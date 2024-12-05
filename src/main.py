@@ -28,7 +28,6 @@ def train(config):
 
     # load MusicFM
     musicfm = MusicFM25Hz(
-        stat_path=os.path.join(workdir, "res", "msd_stats.json"),
         model_path=os.path.join(workdir, "res", "pretrained_msd.pt"),
     )
 
@@ -53,11 +52,9 @@ def train(config):
         train_loader=train_loader,
         valid_loader=valid_loader,
         epoches=config["params"]["epoches"],
-        accelerate_kwargs={
-            "cpu": False,
-            "log_with": ["tensorboard"],
-            "project_dir": "tensorboard_log",
-        },
+        save_interval=config["params"]["save_interval"],
+        log_interval=config["params"]["log_interval"],
+        accelerate_kwargs={"cpu": False,},
     ).start_train()
 
 

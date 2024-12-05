@@ -44,11 +44,10 @@ if [[ "$1" = "download" ]]; then
     wget -P ./res/ https://huggingface.co/minzwon/MusicFM/resolve/main/pretrained_msd.pt
     wget -P ./res/ https://huggingface.co/minzwon/MusicFM/resolve/main/msd_stats.json
 else
-    docker run -it --rm --ipc=host \
+    docker run -it --rm -d --ipc=host \
         -p $PORT:8001 \
         -v /data01/aac_music:$WORKDIDR/music \
         -v /data01/musicfm:$WORKDIDR/musicfm \
-        -v /home/jupyterlab/work/tensorboard_Tlog:$WORKDIDR/tensorboard_log \
         -v $DIR/src:$WORKDIDR/src \
         -v $DIR/res:$WORKDIDR/res \
         --name $CONTAINER_NAME $IMGNAME
