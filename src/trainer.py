@@ -178,8 +178,12 @@ class MusicFMTrainer(nn.Module):
 
     def _load_model(self):
         logger.info("load model: %s", self.model_path)
-        state_dict = torch.load(self.model_path, weights_only=False)["state_dict"]
-
+        pkg = torch.load(self.model_path, weights_only=False)
+        
+        state_dict = pkg["state_dict"]
+        optim = pkg["optim"]
+        
+        logger.info(optim)
         for k, v in state_dict.items():
             logger.debug(k)
 

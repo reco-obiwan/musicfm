@@ -44,7 +44,7 @@ if [[ "$1" = "download" ]]; then
     wget -P ./res/ https://huggingface.co/minzwon/MusicFM/resolve/main/pretrained_msd.pt
     wget -P ./res/ https://huggingface.co/minzwon/MusicFM/resolve/main/msd_stats.json
 else
-    docker run -it --rm -d --ipc=host \
+    docker run -it --rm --ipc=host \
         -p $PORT:8001 \
         -v /data01/aac_music:$WORKDIDR/music \
         -v /data01/musicfm:$WORKDIDR/musicfm \
