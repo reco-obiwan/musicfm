@@ -8,5 +8,5 @@ params:
   log_interval: 100
 
 datasets:
-  track_list: res/musicfm.csv
+  track_list: res/track_ids.csv
   track_download_url: https://pri-alice.qa01.music-flo.com/reco/tracks

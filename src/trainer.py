@@ -6,6 +6,7 @@ from torch import nn, einsum
 from torch.optim import AdamW, lr_scheduler
 from accelerate import Accelerator, DistributedDataParallelKwargs
 from transformers.utils import logging
+import tqdm
 
 from musicfm import MusicFM25Hz
 from utilities import find_most_recent_file
@@ -44,7 +45,7 @@ class MusicFMTrainer(nn.Module):
             find_most_recent_file(model_base_path) or "pretrained_msd.pt",
         )
 
-        self.model = MusicFM25Hz(model_config=os.path.join(model_base_path, "model_config.json"))
+        self.model = MusicFM25Hz(model_config=os.path.join((self.workdir, "res", "model_config.json"))
 
         ddp_kwargs = DistributedDataParallelKwargs(find_unused_parameters=True)
         self.accelerator = Accelerator(
@@ -89,6 +90,10 @@ class MusicFMTrainer(nn.Module):
 
         self.model.train()
         total_loss = 0
+        
+        num_training_steps = len(self.train_loader)
+        progress_bar = tqdm(range(num_training_steps))
+        
         for batch_idx, wav in enumerate(self.train_loader):
             logits, _, losses, accuracies = self.model(wav)
 
@@ -112,6 +117,10 @@ class MusicFMTrainer(nn.Module):
                 self.accelerator.log({"accuracy": accuracy})
 
             total_loss += loss.item()
+            progress_bar.update(1)
+            
+            if batch_idx >= 300:
+                break
 
         return total_loss / len(self.train_loader)
 
@@ -148,10 +157,7 @@ class MusicFMTrainer(nn.Module):
 
             self.steps = 0
             for epoch in range(self.epochs):
-
                 self._train_epoch(epoch)
-                self.accelerator.end_training()
-
                 logger.info("[%s] validation", epoch)
                 self._validate()
 
