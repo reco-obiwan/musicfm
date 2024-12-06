@@ -204,6 +204,7 @@ class MusicFM25Hz(nn.Module):
         encoder_depth=12,
         mask_hop=0.4,
         mask_prob=0.6,
+        model_config="./musicfm/model_config.json"
     ):
         super().__init__()
 
@@ -234,9 +235,10 @@ class MusicFM25Hz(nn.Module):
         self.conv = Conv2dSubsampling(
             1, conv_dim, encoder_dim, strides=[2, 2], n_bands=n_mels
         )
-
+        
+        logger.info("model config: %s", model_config)
         config = Wav2Vec2ConformerConfig.from_pretrained(
-            "facebook/wav2vec2-conformer-rope-large-960h-ft"
+            model_config #"facebook/wav2vec2-conformer-rope-large-960h-ft"
         )
 
         config.num_hidden_layers = encoder_depth

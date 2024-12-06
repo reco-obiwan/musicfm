@@ -3,6 +3,7 @@
 import os
 from datetime import datetime
 
+from pathlib import Path
 import yaml
 
 
@@ -30,16 +31,13 @@ class Config:
         return str(self.config)
 
 
+
+
 def _get_files_from_directory(directory_path):
-    """디렉토리에서 파일 리스트를 가져옵니다."""
+    """디렉토리에서 .pt 확장자를 가진 파일 리스트를 가져옵니다."""
     try:
-        files = [
-            f
-            for f in os.listdir(directory_path)
-            if os.path.isfile(os.path.join(directory_path, f))
-        ]
-        return files
-    except Exception as e:
+        return [f.name for f in Path(directory_path).glob("*.pt") if f.is_file()]
+    except Exception:
         return []
 
 
@@ -50,7 +48,6 @@ def find_most_recent_file(directory_path):
     file_date_map = {}
 
     for file in files:
-        print(file)
         try:
             # 파일명에서 날짜 부분 추출
             date_time_str = file.split("_")[-1].replace(".pt", "")

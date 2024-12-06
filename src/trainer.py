@@ -44,7 +44,7 @@ class MusicFMTrainer(nn.Module):
             find_most_recent_file(model_base_path) or "pretrained_msd.pt",
         )
 
-        self.model = MusicFM25Hz()
+        self.model = MusicFM25Hz(model_config=os.path.join(model_base_path, "model_config.json"))
 
         ddp_kwargs = DistributedDataParallelKwargs(find_unused_parameters=True)
         self.accelerator = Accelerator(
@@ -90,8 +90,6 @@ class MusicFMTrainer(nn.Module):
         self.model.train()
         total_loss = 0
         for batch_idx, wav in enumerate(self.train_loader):
-
-            self.optimizer.zero_grad()
             logits, _, losses, accuracies = self.model(wav)
 
             loss = losses["melspec_2048"]
@@ -99,6 +97,8 @@ class MusicFMTrainer(nn.Module):
 
             self.accelerator.backward(loss)
             self.optimizer.step()
+            self.optimizer.zero_grad()
+            
             self.accelerator.wait_for_everyone()
 
             if batch_idx % self.log_interval == 0 and batch_idx > 0:
@@ -176,18 +176,22 @@ class MusicFMTrainer(nn.Module):
         torch.save(pkg, path)
         logger.info("[%s]save model: %s", epoch, path)
 
-    def _load_model(self):
-        logger.info("load model: %s", self.model_path)
+    def _load_model(self, load_optimizer=False):
+        
         pkg = torch.load(self.model_path, weights_only=False)
         
         state_dict = pkg["state_dict"]
         optim = pkg["optim"]
-        
-        logger.info(optim)
+            
         for k, v in state_dict.items():
             logger.debug(k)
 
         self.model.load_state_dict(state_dict, strict=True)
+        logger.info("loaded model: %s", self.model_path)
+        
+        if load_optimizer:
+            self.optimizer.load_state_dict(optim)
+            logger.info("loaded optimizer")
 
     def forward(self, x):
         raise Exception("Should not be called”")
