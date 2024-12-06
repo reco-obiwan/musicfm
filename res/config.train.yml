@@ -2,7 +2,7 @@ version: musicfm_v01
 wandb: true
 
 params:
-  batch_size: 5
+  batch_size: 13
   epoches: 1000000
   save_interval: 1
   log_interval: 100

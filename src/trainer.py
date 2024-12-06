@@ -38,15 +38,6 @@ class MusicFMTrainer(nn.Module):
 
         self.epochs = epoches
 
-        # 가장 최근 파일 찾기
-        model_base_path = os.path.join(self.workdir, "musicfm")
-        self.model_path = os.path.join(
-            model_base_path,
-            find_most_recent_file(model_base_path) or "pretrained_msd.pt",
-        )
-
-        self.model = MusicFM25Hz(model_config=os.path.join((self.workdir, "res", "model_config.json"))
-
         ddp_kwargs = DistributedDataParallelKwargs(find_unused_parameters=True)
         self.accelerator = Accelerator(
             **accelerate_kwargs, kwargs_handlers=[ddp_kwargs], log_with="wandb"
@@ -57,6 +48,15 @@ class MusicFMTrainer(nn.Module):
         self.train_loader = train_loader
         self.valid_loader = valid_loader
 
+        # 가장 최근 파일 찾기
+        model_base_path = os.path.join(self.workdir, "musicfm")
+        self.model_path = os.path.join(
+            model_base_path,
+            find_most_recent_file(model_base_path) or "pretrained_msd.pt",
+        )
+        
+        self.model = MusicFM25Hz(model_config=os.path.join(self.workdir, "res", "model_config.json"))
+          
         # optimizers
         lr = 2e-5
         betas = (0.9, 0.99)
@@ -70,7 +70,9 @@ class MusicFMTrainer(nn.Module):
             eps=eps,
             weight_decay=weight_decay,
         )
-
+        
+        self._load_model()
+        
         (
             self.model,
             self.optimizer,
@@ -91,10 +93,8 @@ class MusicFMTrainer(nn.Module):
         self.model.train()
         total_loss = 0
         
-        num_training_steps = len(self.train_loader)
-        progress_bar = tqdm(range(num_training_steps))
-        
         for batch_idx, wav in enumerate(self.train_loader):
+            self.optimizer.zero_grad()
             logits, _, losses, accuracies = self.model(wav)
 
             loss = losses["melspec_2048"]
@@ -102,25 +102,18 @@ class MusicFMTrainer(nn.Module):
 
             self.accelerator.backward(loss)
             self.optimizer.step()
-            self.optimizer.zero_grad()
             
-            self.accelerator.wait_for_everyone()
+            #self.accelerator.wait_for_everyone()
 
-            if batch_idx % self.log_interval == 0 and batch_idx > 0:
-
+            if self.accelerator.is_main_process and batch_idx % self.log_interval == 0 and batch_idx > 0:
                 logger.info("-------------------------------")
-                logger.info("[%s] loss: %s", batch_idx, loss.item())
-                logger.info("[%s] accuracy: %s", batch_idx, accuracy.item())
+                logger.info("[%s][train] loss: %s", batch_idx, loss.item())
+                logger.info("[%s][train] accuracy: %s", batch_idx, accuracy.item())
                 logger.info("-------------------------------")
 
-                self.accelerator.log({"loss": loss})
-                self.accelerator.log({"accuracy": accuracy})
+                self.accelerator.log({"loss": loss, "accuracy": accuracy})
 
             total_loss += loss.item()
-            progress_bar.update(1)
-            
-            if batch_idx >= 300:
-                break
 
         return total_loss / len(self.train_loader)
 
@@ -129,20 +122,31 @@ class MusicFMTrainer(nn.Module):
         self.model.eval()
         total_loss = 0
         correct = 0
-        with torch.no_grad():
-            for batch_idx, wav in enumerate(self.train_loader):
+    
+        for batch_idx, wav in enumerate(self.valid_loader):
+            with torch.no_grad():
                 logits, _, losses, accuracies = self.model(wav)
-                loss = losses["melspec_2048"]
-                total_loss += loss.item()
+            
+            loss = losses["melspec_2048"]
+            accuracy = accuracies["melspec_2048"]
+            
+            if self.accelerator.is_main_process:
+                logger.debug("-------------------------------")
+                logger.debug("[%s][valid] loss: %s", batch_idx, loss.item())
+                logger.debug("[%s][valid] accuracy: %s", batch_idx, accuracy.item())
+                logger.debug("-------------------------------")
 
-        avg_loss = total_loss / len(self.valid_loader)
-        self.accelerator.log({"valid_loss": avg_loss})
-        return avg_loss
+            total_loss += loss.item()
+
+        if self.accelerator.is_main_process:
+            avg_loss =  total_loss / len(self.valid_loader)
+            self.accelerator.log({"valid_loss": avg_loss})
+            self.accelerator.log({"valid_total_loss": total_loss})
+            
+        return total_loss, avg_loss
 
     def start_train(self):
         # 모델을 훈련 모드로 설정합니다
-
-        self._load_model()
         self.model.train()
 
         try:
@@ -161,14 +165,17 @@ class MusicFMTrainer(nn.Module):
                 logger.info("[%s] validation", epoch)
                 self._validate()
 
-                if epoch % self.save_interval == 0 and epoch > 0:
+                if epoch % self.save_interval == 0:
                     self._save_model(epoch)
         finally:
             self.accelerator.end_training()
 
         return self
 
-    def _save_model(self, epoch=0):
+    def _save_model(self, epoch):
+        if not self.accelerator.is_main_process:
+            return 
+        
         pkg = dict(
             state_dict=self.accelerator.get_state_dict(
                 self.accelerator.unwrap_model(self.model)
@@ -179,11 +186,14 @@ class MusicFMTrainer(nn.Module):
         path = os.path.join(
             self.workdir, "musicfm", f"{self.version}_{self.formatted_date}.pt"
         )
+        
         torch.save(pkg, path)
         logger.info("[%s]save model: %s", epoch, path)
 
     def _load_model(self, load_optimizer=False):
+        """ Accelerator 적용 전에 호출되어야 함 """
         
+        logger.info("loaded model: %s", self.model_path)
         pkg = torch.load(self.model_path, weights_only=False)
         
         state_dict = pkg["state_dict"]
@@ -191,9 +201,8 @@ class MusicFMTrainer(nn.Module):
             
         for k, v in state_dict.items():
             logger.debug(k)
-
+        
         self.model.load_state_dict(state_dict, strict=True)
-        logger.info("loaded model: %s", self.model_path)
         
         if load_optimizer:
             self.optimizer.load_state_dict(optim)

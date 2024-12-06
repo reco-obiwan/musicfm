@@ -7,6 +7,7 @@ import torch
 import torchaudio
 from torch.utils.data import Dataset
 from transformers.utils import logging
+from retry import retry
 
 logging.set_verbosity_info()
 logger = logging.get_logger("transformers")
@@ -32,8 +33,9 @@ class DatasetBase(Dataset):
         self.session = requests.Session()
 
     def __len__(self):
-        return len(self.track_list)
+        return self.total_track_cnt
 
+    @retry(tries=3, delay=3)
     def __getitem__(self, _):
         tracks = list(range(self.total_track_cnt))
 
@@ -129,11 +131,7 @@ class ValidationDataset(DatasetBase):
             c = [line.strip() for line in f]
 
         self.track_list = random.sample(self.track_list, num_samples)
-
-        self.num_samples = num_samples
-
-    def __len__(self):
-        return self.num_samples
+        self.total_track_cnt = num_samples
 
 
 # if __name__ == "__main__":

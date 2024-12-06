@@ -2,6 +2,10 @@
 
 
 
+## 학습 모니터링
+
+https://wandb.ai/dreamus-company/musicfm_v01
+
 ## Reference
 
 - https://github.com/minzwon/musicfm

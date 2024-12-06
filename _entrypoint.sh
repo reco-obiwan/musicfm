@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+export ACCELERATE_DISABLE_RICH=1
+
 CUR_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$CUR_DIR"
 
