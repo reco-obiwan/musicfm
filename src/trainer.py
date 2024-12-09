@@ -117,8 +117,8 @@ class MusicFMTrainer(nn.Module):
 
         return total_loss / len(self.train_loader)
 
-    def _validate(self):
-
+    def _validate(self, epoch):
+        logger.info("[%s] validation start", epoch)
         self.model.eval()
         total_loss = 0
         correct = 0
@@ -128,20 +128,18 @@ class MusicFMTrainer(nn.Module):
                 logits, _, losses, accuracies = self.model(wav)
             
             loss = losses["melspec_2048"]
-            accuracy = accuracies["melspec_2048"]
-            
-            if self.accelerator.is_main_process:
-                logger.debug("-------------------------------")
-                logger.debug("[%s][valid] loss: %s", batch_idx, loss.item())
-                logger.debug("[%s][valid] accuracy: %s", batch_idx, accuracy.item())
-                logger.debug("-------------------------------")
+            accuracy = accuracies["melspec_2048"]    
+        
+            logger.debug("-------------------------------")
+            logger.debug("[%s][valid] loss: %s", batch_idx, loss.item())
+            logger.debug("[%s][valid] accuracy: %s", batch_idx, accuracy.item())
+            logger.debug("-------------------------------")
 
             total_loss += loss.item()
 
-        if self.accelerator.is_main_process:
-            avg_loss =  total_loss / len(self.valid_loader)
-            self.accelerator.log({"valid_loss": avg_loss})
-            self.accelerator.log({"valid_total_loss": total_loss})
+        avg_loss =  total_loss / len(self.valid_loader)
+        self.accelerator.log({"valid_loss": avg_loss})
+        self.accelerator.log({"valid_total_loss": total_loss})
             
         return total_loss, avg_loss
 
@@ -162,19 +160,18 @@ class MusicFMTrainer(nn.Module):
             self.steps = 0
             for epoch in range(self.epochs):
                 self._train_epoch(epoch)
-                logger.info("[%s] validation", epoch)
-                self._validate()
+                
+                if self.accelerator.is_main_process:
+                    self._validate(epoch)
 
-                if epoch % self.save_interval == 0:
-                    self._save_model(epoch)
+                    if epoch % self.save_interval == 0 and epoch > 0:
+                        self._save_model(epoch)
         finally:
             self.accelerator.end_training()
 
         return self
 
     def _save_model(self, epoch):
-        if not self.accelerator.is_main_process:
-            return 
         
         pkg = dict(
             state_dict=self.accelerator.get_state_dict(
@@ -188,7 +185,7 @@ class MusicFMTrainer(nn.Module):
         )
         
         torch.save(pkg, path)
-        logger.info("[%s]save model: %s", epoch, path)
+        logger.info("[%s] save model: %s", epoch, path)
 
     def _load_model(self, load_optimizer=False):
         """ Accelerator 적용 전에 호출되어야 함 """

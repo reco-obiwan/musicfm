@@ -18,7 +18,8 @@ function train_single () {
 
 if [[ "$1" = "train" ]]; then
     shift 1
-    train_multi
+    train_single
+    # train_multi
 else
     eval "$@"
 fi

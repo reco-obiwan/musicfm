@@ -26,5 +26,6 @@ docker run -it --rm -d --ipc=host \
     -v $DIR/res:$WORKDIDR/res \
     --name $CONTAINER_NAME $IMGNAME
 
+sleep 5
 
 docker logs -f $CONTAINER_NAME    

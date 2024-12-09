@@ -1,33 +1,29 @@
-import os
+
+
+
 import torch
 
-from model.musicfm_25hz import MusicFM25Hz
+# Create a simple tensor to illustrate the concept
+# Let's create a 3x6 tensor for easy understanding
+mx = torch.zeros((3, 6))
 
-# dummy audio (30 seconds, 24kHz)
-wav = (torch.rand(4, 24000 * 30) - 0.5) * 2
-workdir = os.environ.get("WORKDIR")
+# Assume the following time domain indices to be masked (for example purpose)
+# This is similar to the result of calling `nonzero()` on a condition
+time_domain_masked_indices = torch.tensor([
+    [0, 1], 
+    [1, 2], 
+    [2, 4]
+    ])
 
-# load MusicFM
-musicfm = MusicFM25Hz(
-    stat_path=os.path.join(workdir, "res", "msd_stats.json"),
-    model_path=os.path.join(workdir, "res", "pretrained_msd.pt"),
-)
+# Transpose the indices to get them ready for advanced indexing
+indices_for_advanced_indexing = tuple(time_domain_masked_indices.t())
+print(indices_for_advanced_indexing)
 
-# to GPUs
+# Create random noise for each index to be masked
+masking_noise = torch.rand(time_domain_masked_indices.shape[0])
 
+# Assign the masking noise to the specified indices in mx
+mx[indices_for_advanced_indexing] = masking_noise
 
-print(f"wav: {wav.shape}")
-wav = wav.cuda()
-musicfm = musicfm.cuda()
-
-# get embeddings
-musicfm.eval()
-emb = musicfm.get_latent(wav, layer_ix=12)
-print(f"emb: {emb.shape}")
-
-# logits, hidden_emb = musicfm.get_predictions(wav)
-
-
-# print(f"logits: {logits['melspec_2048'].shape}")
-# print(f"hidden_states: {hidden_emb[0].shape}")
-# print(f"hidden_states: {hidden_emb[1].shape}")
+print("Masked tensor:")
+print(mx)

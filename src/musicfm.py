@@ -84,9 +84,9 @@ class RandomProjectionQuantizer(nn.Module):
         self.eval()
 
         # random projection [batch, length, input_dim] -> [batch, length, codebook_dim]
-        # [4, 750, 512]
+        # [b, 750, 512]
         x = einsum("b n d, d e -> b n e", x, self.random_projection)
-        # [4, 750, 16]
+        # [b, 750, 16]
 
         # codebook lookup
         xq = self.codebook_lookup(x)
@@ -258,42 +258,44 @@ class MusicFM25Hz(nn.Module):
         random.seed(seed)
         self.cls_token = nn.Parameter(torch.randn(encoder_dim))
 
-    def masking(self, x):
-        """random masking of 400ms with given probability"""
-        # logger.info(f"x: {x.shape}")
+    def masking(self, x, noise=False):
+        """
+            random masking of 400ms with given probability
+        """
+        # [b, 720000]
         mx = x.clone()
         b, t = mx.shape
+        
+        # len_masking_raw = 9600
         len_masking_raw = int(24000 * self.mask_hop)  # 토큰 길이 400ms
         len_masking_token = int(
             24000 / self.hop_length / 2 / 2 * self.mask_hop
         )  # self.hop_length = 240, self.mask_hop = 0.4
-        # len_masking_raw = 9600, len_masking_token = 10
+        # len_masking_raw = 9600, len_masking_token = 10 
+        # 750 = 75 * 10
+        # 30000ms / 400ms = 75
 
         # get random mask indices
         start_indices = torch.rand(b, t // len_masking_raw) < self.mask_prob
-        # [4, 75]
-
-        a = start_indices.repeat_interleave(len_masking_raw, dim=1)
-        # logger.info(f"a: {a.shape}")
+        # [b, 75] 60% 가 True
 
         time_domain_masked_indices = torch.nonzero(
             start_indices.repeat_interleave(len_masking_raw, dim=1)
         )
-        # logger.info(f"time_domain_masked_indices: {time_domain_masked_indices.shape}")
 
         token_domain_masked_indices = torch.nonzero(
             start_indices.repeat_interleave(len_masking_token, dim=1)
         )
 
-        logger.debug(
-            f"token_domain_masked_indices: {token_domain_masked_indices.shape}"
-        )  # [890, 2]
-
-        # mask with random values
-        masking_noise = (
-            torch.randn(time_domain_masked_indices.shape[0], dtype=x.dtype) * 0.1
-        )  # 0 mean 0.1 std
-        mx[tuple(time_domain_masked_indices.t())] = masking_noise.to(x.device)
+        logger.debug("time_domain_masked_indices: %s, token_domain_masked_indices: %s", time_domain_masked_indices.shape, token_domain_masked_indices.shape)
+        
+        if noise:
+            # mask with random values
+            masking_noise = (
+                torch.randn(time_domain_masked_indices.shape[0], dtype=x.dtype) * 0.01
+            )  # 0 mean 0.1 std
+            
+            mx[tuple(time_domain_masked_indices.t())] = masking_noise.to(x.device)
 
         return mx, token_domain_masked_indices
 
@@ -322,7 +324,7 @@ class MusicFM25Hz(nn.Module):
         out = self.conformer(x, output_hidden_states=True)
         logger.debug(
             f"conformer_out: {out['last_hidden_state'].shape}"
-        )  # [2, 750, 1024]
+        )  # [b, 750, 1024]
         hidden_emb = out["hidden_states"]
         last_emb = out["last_hidden_state"]
         logits = self.linear(last_emb)
@@ -348,9 +350,11 @@ class MusicFM25Hz(nn.Module):
             if key == "chromagram":
                 x[key] = rearrange(x[key], "b f t -> b t f")
             else:
-                # [4, 128, 3000]
+                # [b, 128, 3000]
                 x[key] = rearrange(x[key], "b f (t s) -> b t (s f)", s=4)
-                # [4, 750, 512]
+                # [b, 750, 512]
+                # 하나의 토큰이 400ms 이다.
+                # 30000ms / 40ms = 750
         return x
 
     @torch.no_grad()
@@ -363,12 +367,14 @@ class MusicFM25Hz(nn.Module):
         return out
 
     def get_targets(self, x):
+        # [b, 720000]: b, (30, 24000)
         x = self.preprocessing(x, features=self.features)
+        # [b, 128, 3000] : b, f, (t,s)
         x = self.normalize(x)
         x = self.rearrange(x)
-        # [4, 750, 512]
+        # [b, 750, 512]
         target_tokens = self.tokenize(x)
-        # [4, 750]
+        # [b, 750]
         return target_tokens
 
     def get_predictions(self, x):
@@ -378,10 +384,15 @@ class MusicFM25Hz(nn.Module):
 
         # encoding
         logits, hidden_emb = self.encoder(x["melspec_2048"])
-
+        # logits: [b, 750, 4096]
+        # hidden_emb[0]: [4, 750, 1024]
+        
         return logits, hidden_emb
 
-    def get_latent(self, x, layer_ix=12):
+    def get_latent(self, x, layer_ix=-1):
+        """
+        layer_ix에 지정된 레이어의 embedding을 반환한다. 디폴트로 마지막 레이어의 embedding을 반환한다.
+        """
         _, hidden_states = self.get_predictions(x)
         logger.info(len(hidden_states))
         emb = hidden_states[layer_ix]
@@ -390,17 +401,28 @@ class MusicFM25Hz(nn.Module):
     def get_loss(self, logits, target_tokens, masked_indices):
         losses = {}
         accuracies = {}
+        
+        # logits: [b, 750, 4096]
+        # masked_indices: 750 좌표의 중 True 좌표 정보
         for key in logits.keys():
             masked_logits = logits[key][tuple(masked_indices.t())]
             masked_tokens = target_tokens[key][tuple(masked_indices.t())]
+            
             losses[key] = self.loss(masked_logits, masked_tokens)
-            accuracies[key] = (
-                torch.sum(masked_logits.argmax(-1) == masked_tokens)
-                / masked_tokens.numel()
-            )
+            
+            num_pos = torch.sum(masked_logits.argmax(-1) == masked_tokens)
+            num_elem = masked_tokens.numel()
+            accuracies[key] = num_pos / num_elem
+            
+            # logger.info("num_pos: %s, num_elem: %s, acc: %s", num_pos.item(), num_elem, accuracies[key].item())
+            
         return losses, accuracies
 
     def forward(self, x):
+        """
+        학습 과정을 진행하는 함수입니다.
+        :param x: 입력 데이터
+        """
         # get target feature tokens
         target_tokens = self.get_targets(x)
 
