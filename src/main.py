@@ -7,7 +7,7 @@ from transformers.utils import logging
 
 from utilities import Config
 from trainer import MusicFMTrainer
-from datasets import TrainDataset, ValidationDataset
+from datasets import Dataset
 
 logging.set_verbosity_info()
 logger = logging.get_logger("transformers")
@@ -26,7 +26,7 @@ def train(config):
     batch_size = config["params"]["batch_size"]
 
     train_loader = DataLoader(
-        dataset=TrainDataset(config=config),
+        dataset=Dataset(name="train", config=config, num_samples=100000),
         batch_size=batch_size,
         shuffle=False,
         num_workers=10,
@@ -34,7 +34,7 @@ def train(config):
     )
 
     valid_loader = DataLoader(
-        dataset=ValidationDataset(config=config),
+        dataset=Dataset(name="valid", config=config, num_samples=1000),
         batch_size=batch_size,
         shuffle=False,
         num_workers=10,

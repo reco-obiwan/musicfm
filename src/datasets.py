@@ -5,7 +5,6 @@ import shutil
 import requests
 import torch
 import torchaudio
-from torch.utils.data import Dataset
 from transformers.utils import logging
 from retry import retry
 
@@ -15,22 +14,29 @@ logger = logging.get_logger("transformers")
 workdir = os.environ["WORKDIR"]
 
 
-class DatasetBase(Dataset):
-    def __init__(self, config):
+class Dataset(torch.utils.data.Dataset):
+    def __init__(self, name, config, num_samples=0):
         super().__init__()
-
-        self.local_music_path = os.path.join(workdir, "music")
-
+        
+        self.name =name
         self.config = config
+        self.session = requests.Session()
+        
+        self.local_music_path = os.path.join(workdir, "music")
         self.track_download_url = self.config["datasets"]["track_download_url"]
         self.track_list_path = self.config["datasets"]["track_list"]
 
         with open(self.track_list_path, "r") as f:
             self.track_list = [line.strip() for line in f]
 
-        self.total_track_cnt = len(self.track_list)
-
-        self.session = requests.Session()
+        if num_samples <= 0:
+            self.total_track_cnt = len(self.track_list)
+        else:            
+            self.track_list = random.sample(self.track_list, num_samples)
+            self.total_track_cnt = num_samples            
+            
+        logger.info("total track cnt for %s: %s", name, self.total_track_cnt)
+            
 
     def __len__(self):
         return self.total_track_cnt
@@ -115,23 +121,6 @@ class DatasetBase(Dataset):
             logger.warning(error_message)
 
         return None
-
-
-class TrainDataset(DatasetBase):
-    def __init__(self, config):
-        super().__init__(config=config)
-        with open(self.track_list_path, "r") as f:
-            self.track_list = [line.strip() for line in f]
-
-
-class ValidationDataset(DatasetBase):
-    def __init__(self, config, num_samples=200):
-        super().__init__(config=config)
-        with open(self.track_list_path, "r") as f:
-            c = [line.strip() for line in f]
-
-        self.track_list = random.sample(self.track_list, num_samples)
-        self.total_track_cnt = num_samples
 
 
 # if __name__ == "__main__":

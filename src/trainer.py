@@ -16,6 +16,20 @@ logger = logging.get_logger("transformers")
 
 os.environ["WANDB_API_KEY"] = "dcece3af87a9f23fc730de68bd25e40369f1e476"
 
+def get_model_size(model):
+    param_size = 0
+    buffer_size = 0
+
+    for param in model.parameters():
+        param_size += param.nelement() * param.element_size()
+
+    for buffer in model.buffers():
+        buffer_size += buffer.nelement() * buffer.element_size()
+
+    size_all_mb = (param_size + buffer_size) / (1024 ** 2)
+    
+    return int(size_all_mb)
+
 
 class MusicFMTrainer(nn.Module):
     def __init__(
@@ -26,7 +40,7 @@ class MusicFMTrainer(nn.Module):
         valid_loader,
         accelerate_kwargs,
         *,
-        epoches=100000,
+        epoches=100,
         save_interval=1,
         log_interval=100,
     ):
@@ -56,7 +70,9 @@ class MusicFMTrainer(nn.Module):
         )
         
         self.model = MusicFM25Hz(model_config=os.path.join(self.workdir, "res", "model_config.json"))
-          
+        
+        logger.info("model size: %s GB", get_model_size(self.model) / 1000)
+
         # optimizers
         lr = 2e-5
         betas = (0.9, 0.99)
@@ -193,13 +209,21 @@ class MusicFMTrainer(nn.Module):
         logger.info("loaded model: %s", self.model_path)
         pkg = torch.load(self.model_path, weights_only=False)
         
-        state_dict = pkg["state_dict"]
+        loaded_state_dict = pkg["state_dict"]
+        state_dict = {}
+        
+        exclude_layers=["linear.weight", "linear.bias", "quantizer_melspec_2048_0.codebook"]
+        
+        for k, v in loaded_state_dict.items():
+            if k not in exclude_layers:
+                state_dict[k] = v
+                
         optim = pkg["optim"]
             
         for k, v in state_dict.items():
-            logger.debug(k)
+            logger.info(k)
         
-        self.model.load_state_dict(state_dict, strict=True)
+        self.model.load_state_dict(state_dict, strict=False)
         
         if load_optimizer:
             self.optimizer.load_state_dict(optim)

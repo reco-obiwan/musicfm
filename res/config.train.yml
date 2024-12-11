@@ -3,7 +3,7 @@ wandb: true
 
 params:
   batch_size: 5
-  epoches: 1000000
+  epoches: 1000
   save_interval: 1
   log_interval: 100
 

@@ -31,7 +31,7 @@ class RandomProjectionQuantizer(nn.Module):
         self,
         input_dim,
         codebook_dim=16,
-        codebook_size=4096,
+        codebook_size=8192,
         seed=142,
     ):
         super().__init__()
@@ -195,15 +195,15 @@ class MusicFM25Hz(nn.Module):
         self,
         num_codebooks=1,
         codebook_dim=16,
-        codebook_size=4096,
+        codebook_size=8192,
         features=["melspec_2048"],
         hop_length=240,
         n_mels=128,
         conv_dim=512,
         encoder_dim=1024,
-        encoder_depth=12,
+        encoder_depth=24,
         mask_hop=0.4,
-        mask_prob=0.6,
+        mask_prob=0.4,
         model_config="./musicfm/model_config.json"
     ):
         super().__init__()
@@ -258,7 +258,7 @@ class MusicFM25Hz(nn.Module):
         random.seed(seed)
         self.cls_token = nn.Parameter(torch.randn(encoder_dim))
 
-    def masking(self, x, noise=False):
+    def masking(self, x):
         """
             random masking of 400ms with given probability
         """
@@ -289,13 +289,13 @@ class MusicFM25Hz(nn.Module):
 
         logger.debug("time_domain_masked_indices: %s, token_domain_masked_indices: %s", time_domain_masked_indices.shape, token_domain_masked_indices.shape)
         
-        if noise:
-            # mask with random values
-            masking_noise = (
-                torch.randn(time_domain_masked_indices.shape[0], dtype=x.dtype) * 0.01
-            )  # 0 mean 0.1 std
-            
-            mx[tuple(time_domain_masked_indices.t())] = masking_noise.to(x.device)
+    
+        # mask with random values
+        masking_noise = (
+            torch.randn(time_domain_masked_indices.shape[0], dtype=x.dtype) * 0.1
+        )  # 0 mean 0.1 std
+        
+        mx[tuple(time_domain_masked_indices.t())] = masking_noise.to(x.device)
 
         return mx, token_domain_masked_indices
 
@@ -354,6 +354,7 @@ class MusicFM25Hz(nn.Module):
                 x[key] = rearrange(x[key], "b f (t s) -> b t (s f)", s=4)
                 # [b, 750, 512]
                 # 하나의 토큰이 400ms 이다.
+                # 하나의 토큰의 길이는  10 * float32
                 # 30000ms / 40ms = 750
         return x
 
